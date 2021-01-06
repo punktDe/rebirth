@@ -2,6 +2,8 @@
 
 This package can help you to move orphaned node in the Neos Content Repository.
 
+This package is based on the ideas and code of [Ttree.Rebirth](https://github.com/ttreeagency/Rebirth).
+
 *Warning*: Working with broken / orphaned nodes can be hard, please backup your data before using this package.
 
 _Currently this package supports only document nodes restoration._ That means you can only restore documents
@@ -10,7 +12,7 @@ including their content (and further children), but not only content that has be
 How to use ?
 ------------
 
-- Optional: For each site where you want to restore orphaned nodes, you can create a "Trash" node. This can be
+- Optional: For each site where you want to restore orphaned nodes, you can create a "RestoreTarget" node. This can be
   used as the automatically detected target for document node restoration.
 - Go to the CLI and run the restore command.
 
@@ -25,46 +27,32 @@ CLI commands
 
     flow rebirth:list --type Neos.Neos:Document
     
-## Restore everything under the "Trash" node of the current site
+## Restore everything under the "Restore" node of the current site
 
-    flow rebirth:restore
+    flow rebirth:restoreAll
 
-*Note*: if you have no Trash node, this will fail with the message *Missing restoration target for the current
-node*. Either create a Trash node or specify the target node using `--target`.
+*Note*: if you have no RestoreTarget node, this will fail with the message *Missing restoration target for the currentnode*. Either create a RestoreTarget node, use the flag `--auto-create-target=1` to create one when needed, or specify the target node using `--target`.
 
-## Restore everything under the "Trash" node of the current site, only for the given type
+## Restore everything under the "Restore" node of the current site, only for the given type
 
-    flow rebirth:restore --type Neos.Neos:Document
+    flow rebirth:restoreAll --type Neos.Neos:Document
     
 ## Restore everything under the given target node
 
-    flow rebirth:restore --target f34f834b-c36b-43eb-a580-f0e2f168b241
+    flow rebirth:restoreAll --target f34f834b-c36b-43eb-a580-f0e2f168b241
 
 ## Prune all orphaned document nodes
 
-    flow rebirth:prune
+    flow rebirth:pruneAll
 
 ## Prune all orphaned document nodes for a specific type
 
-    flow rebirth:prune --type Neos.Neos:Document
+    flow rebirth:pruneAll --type Neos.Neos:Document
 
 Troubleshooting
 ---------------
 
-If you get the message *Missing restoration target for the current node* even though a Trash node has been
-created, make sure you have a Trash node matching the context of the nodes to be restored. Specifically check
-the content dimensions. You must have a Trash node that can be found in the same dimension value combination
+If you get the message *Missing restoration target for the current node* even though a RestoreTarget node has been
+created, make sure you have a RestoreTarget node matching the context of the nodes to be restored. Specifically check
+the content dimensions. You must have a RestoreTarget node that can be found in the same dimension value combination
 as the node to be restored.
-
-Acknowledgments
----------------
-
-Development sponsored by [ttree ltd - neos solution provider](http://ttree.ch).
-
-We try our best to craft this package with a lots of love, we are open to
-sponsoring, support request, ... just contact us.
-
-License
--------
-
-Licensed under MIT, see [LICENSE](LICENSE)
