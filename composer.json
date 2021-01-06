@@ -1,6 +1,6 @@
 {
     "description": "Neos Content Repository Helper to rebirth orphaned nodes",
-    "name": "punktDe/rebirth",
+    "name": "punktde/rebirth",
     "type": "neos-package",
     "license": "MIT",
     "keywords": [
