@@ -3,7 +3,7 @@
     'Neos.Neos:Document': true
 
   ui:
-    label: Trash
+    label: Restore Target
     icon: fas fa-recycle
 
   constraints:
