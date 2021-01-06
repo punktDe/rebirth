@@ -1,4 +1,4 @@
-prototype(Ttree.Rebirth:Trash) < prototype(Neos.Fusion:Component) {
+prototype(PunktDe.Rebirth:Document.RestoreTarget) < prototype(Neos.Fusion:Component) {
 
     renderer = Neos.Neos:Page {
         head {

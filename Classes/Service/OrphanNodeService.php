@@ -1,10 +1,10 @@
 <?php
 declare(strict_types=1);
 
-namespace Ttree\Rebirth\Service;
+namespace PunktDe\Rebirth\Service;
 
 /*
- * This file is part of the Ttree.Rebirth package.
+ * This file is part of the PunktDe.Rebirth package.
  *
  * (c) Contributors of the Neos Project - www.neos.io
  */
@@ -13,6 +13,8 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Query\Expr\Join;
 use Doctrine\ORM\QueryBuilder;
+use Neos\ContentRepository\Domain\Service\NodeTypeManager;
+use Neos\ContentRepository\Domain\Utility\NodePaths;
 use Neos\Flow\Annotations as Flow;
 use Neos\Neos\Controller\CreateContentContextTrait;
 use Neos\Neos\Controller\Exception\NodeNotFoundException;
@@ -48,6 +50,17 @@ class OrphanNodeService
      */
     protected $nodeFactory;
 
+    /**
+     * @Flow\Inject
+     * @var NodeTypeManager
+     */
+    protected $nodeTypeManager;
+
+    /**
+     * @Flow\InjectConfiguration(package="PunktDe.Rebirth", path="restoreTargetNodeType")
+     * @var string
+     */
+    protected $restoreTargetNode;
 
     /**
      * @param string $workspaceName
@@ -77,20 +90,17 @@ class OrphanNodeService
         $node->moveInto($target);
     }
 
-    /**
-     * @param NodeInterface $node
-     * @param null $targetIdentifier
-     * @return NodeInterface
-     * @throws NodeNotFoundException
-     */
-    public function target(NodeInterface $node, $targetIdentifier = null): NodeInterface
+
+    public function getTargetNode(NodeInterface $node, $targetIdentifier = null, bool $autoCreateTargetIfNotExistent = false): NodeInterface
     {
         if ($targetIdentifier === null) {
-            return $this->resolveTargetInCurrentSite($node);
+            return $this->resolveTargetInCurrentSite($node, $autoCreateTargetIfNotExistent);
         }
+
         $context = $node->getContext();
         $targetNode = $context->getNodeByIdentifier($targetIdentifier);
         $this->isValidTargetNode($targetNode, $targetIdentifier);
+
         return $targetNode;
     }
 
@@ -100,14 +110,16 @@ class OrphanNodeService
      * @return NodeInterface
      * @throws NodeNotFoundException
      */
-    protected function isValidTargetNode(NodeInterface $targetNode, $expectedIdentifier)
+    protected function isValidTargetNode(NodeInterface $targetNode, string $expectedIdentifier): NodeInterface
     {
         if ($targetNode === null) {
             throw new NodeNotFoundException(vsprintf('The given target node is not found (%s)', [$expectedIdentifier]), 1489566677);
         }
+
         if (!$targetNode->getNodeType()->isOfType('Neos.Neos:Document')) {
             throw new NodeNotFoundException(vsprintf('Target node must a of type Neos.Neos:Document (current type: %s)', [$targetNode->getNodeType()]), 1489566677);
         }
+
         return $targetNode;
     }
 
@@ -151,26 +163,23 @@ class OrphanNodeService
             ->getQuery()->getResult());
     }
 
-    /**
-     * @param NodeInterface $node
-     * @return NodeInterface
-     * @throws NodeNotFoundException
-     */
-    protected function resolveTargetInCurrentSite(NodeInterface $node)
+    protected function resolveTargetInCurrentSite(NodeInterface $node, bool $autoCreateTargetIfNotExistent): NodeInterface
     {
         $siteNode = $this->siteNode($node);
-        $childNodes = $siteNode->getChildNodes('Ttree.Rebirth:Trash', 1);
+        $childNodes = $siteNode->getChildNodes($this->restoreTargetNode, 1);
+
         if ($childNodes === []) {
-            throw new NodeNotFoundException(vsprintf('Missing Trash node under %s', [$node->getLabel(), $node->getIdentifier()]), 1489424180);
+            if ($autoCreateTargetIfNotExistent) {
+                return $siteNode->createNode(NodePaths::generateRandomNodeName(), $this->nodeTypeManager->getNodeType($this->restoreTargetNode));
+            }
+
+            throw new NodeNotFoundException(vsprintf('Missing restoration target node under %s', [$node->getLabel(), $node->getIdentifier()]), 1489424180);
         }
+
         return $childNodes[0];
     }
 
-    /**
-     * @param NodeInterface $node
-     * @return NodeInterface
-     */
-    protected function siteNode(NodeInterface $node)
+    protected function siteNode(NodeInterface $node): NodeInterface
     {
         /** @var ContentContext $context */
         $context = $node->getContext();

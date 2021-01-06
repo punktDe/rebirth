@@ -2,9 +2,9 @@ Neos:
   Neos:
     fusion:
       autoInclude:
-        'Ttree.Rebirth': true
+        'PunktDe.Rebirth': true
     userInterface:
       translation:
         autoInclude:
-          'Ttree.Rebirth':
+          'PunktDe.Rebirth':
             - 'NodeTypes/*'

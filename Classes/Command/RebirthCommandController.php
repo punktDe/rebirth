@@ -1,17 +1,17 @@
 <?php
 declare(strict_types=1);
 
-namespace Ttree\Rebirth\Command;
+namespace PunktDe\Rebirth\Command;
 
 /*
- * This file is part of the Ttree.Rebirth package.
+ * This file is part of the PunktDe.Rebirth package.
  *
  * (c) Contributors of the Neos Project - www.neos.io
  */
 
 use Closure;
 use Doctrine\Common\Collections\ArrayCollection;
-use Ttree\Rebirth\Service\OrphanNodeService;
+use PunktDe\Rebirth\Service\OrphanNodeService;
 use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Cli\CommandController;
 use Neos\Neos\Controller\Exception\NodeNotFoundException;
@@ -71,16 +71,18 @@ class RebirthCommandController extends CommandController
      * Restore orphan documents
      *
      * @param string $workspace
-     * @param string $type
-     * @param string $target
+     * @param string $type A superType of documents to restore
+     * @param null $target The identifier of the restore target
+     * @param bool $autoCreateTarget Automatically create the the trash document if it does not exist.
      */
-    public function restoreAllCommand($workspace = 'live', $type = 'Neos.Neos:Document', $target = null): void
+    public function restoreAllCommand($workspace = 'live', $type = 'Neos.Neos:Document', $target = null, bool $autoCreateTarget = false): void
     {
-        $this->command(function (NodeInterface $node, $restore, $targetIdentifier) {
+        $this->command(function (NodeInterface $node, $restore, $targetIdentifier) use ($autoCreateTarget) {
             $this->output->outputLine('%s <comment>%s</comment> (%s) in <b>%s</b>', [$node->getIdentifier(), $node->getLabel(), $node->getNodeType(), $node->getPath()]);
+
             if ($restore) {
                 try {
-                    $target = $this->orphanNodeService->target($node, $targetIdentifier);
+                    $target = $this->orphanNodeService->getTargetNode($node, $targetIdentifier, $autoCreateTarget);
                     $this->outputLine('  <info>Restore to %s (%s)</info>', [$node->getPath(), $node->getIdentifier()]);
                     $this->orphanNodeService->restore($node, $target);
                     $this->outputLine('  <info>Done, check your node at "%s"</info>', [$node->getPath()]);

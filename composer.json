@@ -1,6 +1,6 @@
 {
     "description": "Neos Content Repository Helper to rebirth orphaned nodes",
-    "name": "ttree/rebirth",
+    "name": "punktDe/rebirth",
     "type": "neos-package",
     "license": "MIT",
     "keywords": [
@@ -13,12 +13,12 @@
     },
     "autoload": {
         "psr-4": {
-            "Ttree\\Rebirth\\": "Classes/"
+            "PunktDe\\Rebirth\\": "Classes/"
         }
     },
     "extra": {
         "neos": {
-            "package-key": "Ttree.Rebirth"
+            "package-key": "PunktDe.Rebirth"
         },
         "applied-flow-migrations": [
             "TYPO3.FLOW3-201201261636",
