@@ -6,10 +6,6 @@
     label: Restore Target
     icon: fas fa-recycle
 
-  constraints:
-    nodeTypes:
-      '*': false
-
   properties:
     _hidden:
       defaultValue: true
