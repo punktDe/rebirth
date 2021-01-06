@@ -5,8 +5,6 @@ namespace PunktDe\Rebirth\Service;
 
 /*
  * This file is part of the PunktDe.Rebirth package.
- *
- * (c) Contributors of the Neos Project - www.neos.io
  */
 
 use Doctrine\Common\Collections\ArrayCollection;
@@ -15,8 +13,11 @@ use Doctrine\ORM\Query\Expr\Join;
 use Doctrine\ORM\QueryBuilder;
 use Neos\ContentRepository\Domain\Service\NodeTypeManager;
 use Neos\ContentRepository\Domain\Utility\NodePaths;
+use Neos\ContentRepository\Exception\NodeExistsException;
+use Neos\ContentRepository\Exception\NodeTypeNotFoundException;
 use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Persistence\Doctrine\PersistenceManager;
+use Neos\Flow\Persistence\Exception;
 use Neos\Neos\Controller\CreateContentContextTrait;
 use Neos\Neos\Controller\Exception\NodeNotFoundException;
 use Neos\Neos\Domain\Service\ContentContext;
@@ -91,10 +92,12 @@ class OrphanNodeService
     /**
      * @param NodeInterface $node
      * @param NodeInterface $target
+     * @throws Exception
      */
     public function restore(NodeInterface $node, NodeInterface $target): void
     {
         $node->moveInto($target);
+        $this->persistenceManager->persistAll();
     }
 
 
@@ -177,6 +180,15 @@ class OrphanNodeService
             ->getQuery()->getResult());
     }
 
+    /**
+     * @param NodeInterface $node
+     * @param bool $autoCreateTargetIfNotExistent
+     * @return NodeInterface
+     * @throws NodeNotFoundException
+     * @throws NodeExistsException
+     * @throws NodeTypeNotFoundException
+     * @throws Exception
+     */
     protected function resolveTargetInCurrentSite(NodeInterface $node, bool $autoCreateTargetIfNotExistent): NodeInterface
     {
         $siteNode = $this->getSiteNodeOfNode($node);

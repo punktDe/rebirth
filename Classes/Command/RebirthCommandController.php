@@ -5,8 +5,6 @@ namespace PunktDe\Rebirth\Command;
 
 /*
  * This file is part of the PunktDe.Rebirth package.
- *
- * (c) Contributors of the Neos Project - www.neos.io
  */
 
 use Closure;
@@ -78,12 +76,14 @@ class RebirthCommandController extends CommandController
     public function restoreAllCommand($workspace = 'live', $type = 'Neos.Neos:Document', $target = null, bool $autoCreateTarget = false): void
     {
         $this->command(function (NodeInterface $node, $restore, $targetIdentifier) use ($autoCreateTarget) {
-            $this->output->outputLine('%s <comment>%s</comment> (%s) in <b>%s</b>', [$node->getIdentifier(), $node->getLabel(), $node->getNodeType(), $node->getPath()]);
+            $nodeInfo = $this->convertNodeToNodeInfo($node);
+
+            $this->output->outputLine('%s %s %s <comment>%s</comment> (%s) in <b>%s</b>', $nodeInfo);
 
             if ($restore) {
                 try {
                     $target = $this->orphanNodeService->getTargetNode($node, $targetIdentifier, $autoCreateTarget);
-                    $this->outputLine('  <info>Restore to %s (%s)</info>', [$node->getPath(), $node->getIdentifier()]);
+                    $this->outputLine('  <info>Restore to %s (%s)</info>', [$target->getPath(), $target->getLabel()]);
                     $this->orphanNodeService->restore($node, $target);
                     $this->outputLine('  <info>Done, check your node at "%s"</info>', [$node->getPath()]);
                 } catch (NodeNotFoundException $exception) {
@@ -117,15 +117,18 @@ class RebirthCommandController extends CommandController
 
     protected function convertNodesToNodeInfo(ArrayCollection $nodes): array
     {
-        return $nodes->map(function (NodeInterface $node) {
-            return [
-                'site' => $node->getContext()->getCurrentSite()->getName(),
-                'dimension' => str_replace(['{', '}', '[', ']', '"'], '', json_encode($node->getContext()->getDimensions(), JSON_THROW_ON_ERROR)),
-                'identifier' => $node->getIdentifier(),
-                'nodeType' => $node->getNodeType(),
-                'label' => $node->getLabel(),
-                'path' => $node->getPath(),
-            ];
-        })->toArray();
+        return array_map([$this, 'convertNodeToNodeInfo'], $nodes->toArray());
+    }
+
+    protected function convertNodeToNodeInfo(NodeInterface $node): array
+    {
+        return [
+            'site' => $node->getContext()->getCurrentSite()->getName(),
+            'dimension' => str_replace(['{', '}', '[', ']', '"'], '', json_encode($node->getContext()->getDimensions(), JSON_THROW_ON_ERROR)),
+            'identifier' => $node->getIdentifier(),
+            'nodeType' => $node->getNodeType(),
+            'label' => $node->getLabel(),
+            'path' => $node->getPath(),
+        ];
     }
 }
