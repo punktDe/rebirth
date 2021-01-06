@@ -16,6 +16,7 @@ use Doctrine\ORM\QueryBuilder;
 use Neos\ContentRepository\Domain\Service\NodeTypeManager;
 use Neos\ContentRepository\Domain\Utility\NodePaths;
 use Neos\Flow\Annotations as Flow;
+use Neos\Flow\Persistence\Doctrine\PersistenceManager;
 use Neos\Neos\Controller\CreateContentContextTrait;
 use Neos\Neos\Controller\Exception\NodeNotFoundException;
 use Neos\Neos\Domain\Service\ContentContext;
@@ -63,6 +64,12 @@ class OrphanNodeService
     protected $restoreTargetNode;
 
     /**
+     * @Flow\Inject
+     * @var PersistenceManager
+     */
+    protected $persistenceManager;
+
+    /**
      * @param string $workspaceName
      * @param string $type
      * @return ArrayCollection
@@ -91,6 +98,13 @@ class OrphanNodeService
     }
 
 
+    /**
+     * @param NodeInterface $node
+     * @param null $targetIdentifier
+     * @param bool $autoCreateTargetIfNotExistent
+     * @return NodeInterface
+     * @throws NodeNotFoundException
+     */
     public function getTargetNode(NodeInterface $node, $targetIdentifier = null, bool $autoCreateTargetIfNotExistent = false): NodeInterface
     {
         if ($targetIdentifier === null) {
@@ -165,12 +179,15 @@ class OrphanNodeService
 
     protected function resolveTargetInCurrentSite(NodeInterface $node, bool $autoCreateTargetIfNotExistent): NodeInterface
     {
-        $siteNode = $this->siteNode($node);
+        $siteNode = $this->getSiteNodeOfNode($node);
         $childNodes = $siteNode->getChildNodes($this->restoreTargetNode, 1);
 
         if ($childNodes === []) {
             if ($autoCreateTargetIfNotExistent) {
-                return $siteNode->createNode(NodePaths::generateRandomNodeName(), $this->nodeTypeManager->getNodeType($this->restoreTargetNode));
+                $targetNode = $siteNode->createNode(NodePaths::generateRandomNodeName(), $this->nodeTypeManager->getNodeType($this->restoreTargetNode));
+                $targetNode->setProperty('title', 'Restored Documents');
+                $this->persistenceManager->persistAll();
+                return $targetNode;
             }
 
             throw new NodeNotFoundException(vsprintf('Missing restoration target node under %s', [$node->getLabel(), $node->getIdentifier()]), 1489424180);
@@ -179,7 +196,7 @@ class OrphanNodeService
         return $childNodes[0];
     }
 
-    protected function siteNode(NodeInterface $node): NodeInterface
+    protected function getSiteNodeOfNode(NodeInterface $node): NodeInterface
     {
         /** @var ContentContext $context */
         $context = $node->getContext();
