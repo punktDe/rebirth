@@ -26,12 +26,13 @@ class RebirthCommandController extends CommandController
     /**
      * List orphan documents
      *
-     * @param string $workspace
-     * @param string $type
+     * @param string $workspace The workspace to use
+     * @param string|null $dimensions The dimension combination as json representation, defaults to all dimensions
+     * @param string $type The supertype of the nods to search
      */
-    public function listCommand(string $workspace = 'live', string $type = 'Neos.Neos:Document'): void
+    public function listCommand(string $workspace = 'live', ?string $dimensions = null, string $type = 'Neos.Neos:Document'): void
     {
-        $nodes = $this->orphanNodeService->listByWorkspace($workspace, $type);
+        $nodes = $this->orphanNodeService->listOrphanNodes($workspace, $dimensions, $type);
 
         $this->output->outputTable(
             array_map(static function (array $nodeInfo) {
@@ -53,27 +54,29 @@ class RebirthCommandController extends CommandController
     /**
      * Prune orphan documents
      *
-     * @param string $workspace
-     * @param string $type
+     * @param string $workspace The workspace to use
+     * @param string|null $dimensions The dimension combination as json representation, defaults to all dimensions
+     * @param string $type The supertype of the nods to search
      */
-    public function pruneAllCommand($workspace = 'live', $type = 'Neos.Neos:Document'): void
+    public function pruneAllCommand($workspace = 'live', ?string $dimensions = null, $type = 'Neos.Neos:Document'): void
     {
         $this->command(function (NodeInterface $node) {
             $this->output->outputLine('%s <comment>%s</comment> (%s) in <b>%s</b>', [$node->getIdentifier(), $node->getLabel(), $node->getNodeType(), $node->getPath()]);
             $node->remove();
             $this->outputLine('  <info>Done, node removed</info>');
-        }, $workspace, $type, false);
+        }, $workspace, $dimensions, $type, false);
     }
 
     /**
      * Restore orphan documents
      *
      * @param string $workspace
+     * @param string|null $dimensions The dimension combination as json representation, defaults to all dimensions
      * @param string $type A superType of documents to restore
      * @param null $target The identifier of the restore target
      * @param bool $autoCreateTarget Automatically create the the trash document if it does not exist.
      */
-    public function restoreAllCommand($workspace = 'live', $type = 'Neos.Neos:Document', $target = null, bool $autoCreateTarget = false): void
+    public function restoreAllCommand($workspace = 'live', ?string $dimensions = null, $type = 'Neos.Neos:Document', $target = null, bool $autoCreateTarget = false): void
     {
         $this->command(function (NodeInterface $node, $restore, $targetIdentifier) use ($autoCreateTarget) {
             $nodeInfo = $this->convertNodeToNodeInfo($node);
@@ -83,27 +86,28 @@ class RebirthCommandController extends CommandController
             if ($restore) {
                 try {
                     $target = $this->orphanNodeService->getTargetNode($node, $targetIdentifier, $autoCreateTarget);
-                    $this->outputLine('  <info>Restore to %s (%s)</info>', [$target->getPath(), $target->getLabel()]);
+                    $this->outputLine('  <info>Restore to %s: %s</info>', [$target->getLabel(), $target]);
                     $this->orphanNodeService->restore($node, $target);
-                    $this->outputLine('  <info>Done, check your node at "%s"</info>', [$node->getPath()]);
+                    $this->outputLine('  <info>Done, check your node at "%s"</info>', [$node]);
                 } catch (NodeNotFoundException $exception) {
                     $this->outputLine('  <error>Missing restoration target for the current node</error>');
                     return;
                 }
             }
-        }, $workspace, $type, true, $target);
+        }, $workspace, $dimensions, $type, true, $target);
     }
 
     /**
      * @param Closure $func
      * @param string $workspace
+     * @param string $dimensions
      * @param string $type
      * @param bool $restore
-     * @param string $targetIdentifier
+     * @param null $targetIdentifier
      */
-    protected function command(Closure $func, $workspace, $type, $restore = false, $targetIdentifier = null): void
+    protected function command(Closure $func, string $workspace, string $dimensions, string $type, $restore = false, $targetIdentifier = null): void
     {
-        $nodes = $this->orphanNodeService->listByWorkspace($workspace, $type);
+        $nodes = $this->orphanNodeService->listOrphanNodes($workspace, $dimensions, $type);
         $nodes->map(function (NodeInterface $node) use ($func, $restore, $targetIdentifier) {
             $func($node, $restore, $targetIdentifier);
         });

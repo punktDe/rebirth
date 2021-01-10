@@ -15,6 +15,7 @@ use Neos\ContentRepository\Domain\Service\NodeTypeManager;
 use Neos\ContentRepository\Domain\Utility\NodePaths;
 use Neos\ContentRepository\Exception\NodeExistsException;
 use Neos\ContentRepository\Exception\NodeTypeNotFoundException;
+use Neos\ContentRepository\Utility;
 use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Persistence\Doctrine\PersistenceManager;
 use Neos\Flow\Persistence\Exception;
@@ -72,12 +73,13 @@ class OrphanNodeService
 
     /**
      * @param string $workspaceName
+     * @param string|null $dimensions
      * @param string $type
      * @return ArrayCollection
      */
-    public function listByWorkspace(string $workspaceName, $type = 'Neos.Neos:Document'): ArrayCollection
+    public function listOrphanNodes(string $workspaceName, ?string $dimensions = null, $type = 'Neos.Neos:Document'): ArrayCollection
     {
-        $nodes = $this->nodeDataByWorkspace($workspaceName);
+        $nodes = $this->findOrphanNodes($workspaceName, $dimensions);
 
         $nodes = $nodes->filter(function (NodeData $nodeData) use ($type) {
             return $nodeData->getNodeType()->isOfType($type);
@@ -103,12 +105,12 @@ class OrphanNodeService
 
     /**
      * @param NodeInterface $node
-     * @param null $targetIdentifier
+     * @param string $targetIdentifier
      * @param bool $autoCreateTargetIfNotExistent
      * @return NodeInterface
      * @throws NodeNotFoundException
      */
-    public function getTargetNode(NodeInterface $node, $targetIdentifier = null, bool $autoCreateTargetIfNotExistent = false): NodeInterface
+    public function getTargetNode(NodeInterface $node, ?string $targetIdentifier = null, bool $autoCreateTargetIfNotExistent = false): NodeInterface
     {
         if ($targetIdentifier === null) {
             return $this->resolveTargetInCurrentSite($node, $autoCreateTargetIfNotExistent);
@@ -142,22 +144,34 @@ class OrphanNodeService
 
     /**
      * @param string $workspaceName
+     * @param string|null $dimensions
      * @return ArrayCollection
+     * @throws \JsonException
      */
-    protected function nodeDataByWorkspace(string $workspaceName): ArrayCollection
+    protected function findOrphanNodes(string $workspaceName, ?string $dimensions = null): ArrayCollection
     {
+        $dimensionsHash = null;
+        if ($dimensions !== null) {
+            $dimensionsArray = json_decode($dimensions, true, 512, JSON_THROW_ON_ERROR);
+
+            if ($dimensionsArray !== false) {
+                $dimensionsHash = Utility::sortDimensionValueArrayAndReturnDimensionsHash($dimensionsArray);
+            }
+        }
+
         /** @var QueryBuilder $queryBuilder */
         $queryBuilder = $this->entityManager->createQueryBuilder();
 
         $workspaceList = [];
         /** @var Workspace $workspace */
         $workspace = $this->workspaceRepository->findByIdentifier($workspaceName);
+
         while ($workspace !== null) {
             $workspaceList[] = $workspace->getName();
             $workspace = $workspace->getBaseWorkspace();
         }
 
-        return new ArrayCollection($queryBuilder
+        $query = $queryBuilder
             ->select('n')
             ->from(NodeData::class, 'n')
             ->leftJoin(
@@ -176,8 +190,13 @@ class OrphanNodeService
                 'dimensionLess' => 'd751713988987e9331980363e24189ce'
             ])
             ->orderBy('n.dimensionsHash')
-            ->addOrderBy('n.path')
-            ->getQuery()->getResult());
+            ->addOrderBy('n.path');
+
+        if ($dimensionsHash !== null) {
+            $query->andWhere('n.dimensionsHash = :dimensionsHash')->setParameter('dimensionsHash', $dimensionsHash);
+        }
+
+        return new ArrayCollection($query->getQuery()->getResult());
     }
 
     /**
