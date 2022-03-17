@@ -58,7 +58,7 @@ class RebirthCommandController extends CommandController
      * @param string|null $dimensions The dimension combination as json representation, defaults to all dimensions
      * @param string $type The supertype of the nods to search
      */
-    public function pruneAllCommand($workspace = 'live', ?string $dimensions = null, $type = 'Neos.Neos:Document'): void
+    public function pruneAllCommand(string $workspace = 'live', ?string $dimensions = null, string $type = 'Neos.Neos:Document'): void
     {
         $this->command(function (NodeInterface $node) {
             $this->output->outputLine('%s <comment>%s</comment> (%s) in <b>%s</b>', [$node->getIdentifier(), $node->getLabel(), $node->getNodeType(), $node->getPath()]);
@@ -73,10 +73,10 @@ class RebirthCommandController extends CommandController
      * @param string $workspace
      * @param string|null $dimensions The dimension combination as json representation, defaults to all dimensions
      * @param string $type A superType of documents to restore
-     * @param null $target The identifier of the restore target
-     * @param bool $autoCreateTarget Automatically create the the trash document if it does not exist.
+     * @param string|null $target The identifier of the restore target
+     * @param bool $autoCreateTarget Automatically create the trash document if it does not exist.
      */
-    public function restoreAllCommand($workspace = 'live', ?string $dimensions = null, $type = 'Neos.Neos:Document', $target = null, bool $autoCreateTarget = false): void
+    public function restoreAllCommand(string $workspace = 'live', ?string $dimensions = null, string $type = 'Neos.Neos:Document', string $target = null, bool $autoCreateTarget = false): void
     {
         $this->command(function (NodeInterface $node, $restore, $targetIdentifier) use ($autoCreateTarget) {
             $nodeInfo = $this->convertNodeToNodeInfo($node);
@@ -92,6 +92,10 @@ class RebirthCommandController extends CommandController
                 } catch (NodeNotFoundException $exception) {
                     $this->outputLine('  <error>Missing restoration target for the current node</error>');
                     return;
+                } catch (\Exception $e) {
+                    $this->outputLine('  <error>Could not restore the node. Skipping Step. Exited with error:</error>');
+                    $this->outputLine(sprintf('  <error>%s (Error Code: %d)</error>', $e->getMessage(), $e->getCode()));
+                    return;
                 }
             }
         }, $workspace, $dimensions, $type, true, $target);
@@ -100,12 +104,12 @@ class RebirthCommandController extends CommandController
     /**
      * @param Closure $func
      * @param string $workspace
-     * @param string $dimensions
+     * @param string|null $dimensions
      * @param string $type
      * @param bool $restore
-     * @param null $targetIdentifier
+     * @param string|null $targetIdentifier
      */
-    protected function command(Closure $func, string $workspace, string $dimensions, string $type, $restore = false, $targetIdentifier = null): void
+    protected function command(Closure $func, string $workspace, ?string $dimensions, string $type, bool $restore = false, string $targetIdentifier = null): void
     {
         $nodes = $this->orphanNodeService->listOrphanNodes($workspace, $dimensions, $type);
         $nodes->map(function (NodeInterface $node) use ($func, $restore, $targetIdentifier) {
