@@ -92,6 +92,10 @@ class RebirthCommandController extends CommandController
                 } catch (NodeNotFoundException $exception) {
                     $this->outputLine('  <error>Missing restoration target for the current node</error>');
                     return;
+                } catch (\Exception $e) {
+                    $this->outputLine('  <error>Could not restore the node. Skipping Step. Exited with error:</error>');
+                    $this->outputLine(sprintf('  <error>%s (Error Code: %d)</error>', $e->getMessage(), $e->getCode()));
+                    return;
                 }
             }
         }, $workspace, $dimensions, $type, true, $target);
